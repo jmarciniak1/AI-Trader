@@ -385,23 +385,23 @@ resource tradingAgent 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'MATH_SERVICE_URL'
-              value: 'http://ca-math-service.internal'
+              value: 'http://${mathService.properties.configuration.ingress.fqdn}'
             }
             {
               name: 'SEARCH_SERVICE_URL'
-              value: 'http://ca-search-service.internal'
+              value: 'http://${searchService.properties.configuration.ingress.fqdn}'
             }
             {
               name: 'TRADE_SERVICE_URL'
-              value: 'http://ca-trade-service.internal'
+              value: 'http://${tradeService.properties.configuration.ingress.fqdn}'
             }
             {
               name: 'PRICE_SERVICE_URL'
-              value: 'http://ca-price-service.internal'
+              value: 'http://${priceService.properties.configuration.ingress.fqdn}'
             }
             {
               name: 'CRYPTO_SERVICE_URL'
-              value: 'http://ca-crypto-service.internal'
+              value: 'http://${cryptoService.properties.configuration.ingress.fqdn}'
             }
             {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
