@@ -1,0 +1,138 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "16764090668251611630"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for monitoring resources"
+      }
+    },
+    "logAnalyticsName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Log Analytics Workspace"
+      }
+    },
+    "appInsightsName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of Application Insights"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags to apply to resources"
+      }
+    },
+    "retentionInDays": {
+      "type": "int",
+      "defaultValue": 30,
+      "metadata": {
+        "description": "Log Analytics retention in days"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[parameters('logAnalyticsName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": "[parameters('retentionInDays')]",
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[parameters('appInsightsName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]",
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "logAnalyticsId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Log Analytics Workspace"
+      },
+      "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]"
+    },
+    "logAnalyticsName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Log Analytics Workspace"
+      },
+      "value": "[parameters('logAnalyticsName')]"
+    },
+    "logAnalyticsCustomerId": {
+      "type": "string",
+      "metadata": {
+        "description": "Customer ID of the Log Analytics Workspace"
+      },
+      "value": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName')), '2023-09-01').customerId]"
+    },
+    "logAnalyticsSharedKey": {
+      "type": "string",
+      "metadata": {
+        "description": "Primary Shared Key of the Log Analytics Workspace"
+      },
+      "value": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName')), '2023-09-01').primarySharedKey]"
+    },
+    "appInsightsId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of Application Insights"
+      },
+      "value": "[resourceId('Microsoft.Insights/components', parameters('appInsightsName'))]"
+    },
+    "appInsightsName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of Application Insights"
+      },
+      "value": "[parameters('appInsightsName')]"
+    },
+    "appInsightsInstrumentationKey": {
+      "type": "string",
+      "metadata": {
+        "description": "Instrumentation Key of Application Insights"
+      },
+      "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').InstrumentationKey]"
+    },
+    "appInsightsConnectionString": {
+      "type": "string",
+      "metadata": {
+        "description": "Connection String of Application Insights"
+      },
+      "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').ConnectionString]"
+    }
+  }
+}

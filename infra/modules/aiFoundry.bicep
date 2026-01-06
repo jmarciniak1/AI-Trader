@@ -25,14 +25,8 @@ param keyVaultId string
 @description('Resource ID of Application Insights')
 param appInsightsId string
 
-@description('Resource ID of the Log Analytics Workspace')
-param logAnalyticsId string
-
 @description('Resource ID of the Managed Identity')
 param managedIdentityId string
-
-@description('Principal ID of the Managed Identity')
-param managedIdentityPrincipalId string
 
 @description('OpenAI model deployments')
 param modelDeployments array = [

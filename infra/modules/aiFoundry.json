@@ -1,0 +1,269 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "16058133464390155048"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for AI resources"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags to apply to resources"
+      }
+    },
+    "aiHubName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the AI Hub"
+      }
+    },
+    "aiProjectName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the AI Project"
+      }
+    },
+    "openAIName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Azure OpenAI Service"
+      }
+    },
+    "storageAccountId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Storage Account"
+      }
+    },
+    "keyVaultId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Key Vault"
+      }
+    },
+    "appInsightsId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of Application Insights"
+      }
+    },
+    "managedIdentityId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Managed Identity"
+      }
+    },
+    "modelDeployments": {
+      "type": "array",
+      "defaultValue": [
+        {
+          "name": "gpt-4o",
+          "model": {
+            "format": "OpenAI",
+            "name": "gpt-4o",
+            "version": "2024-08-06"
+          },
+          "sku": {
+            "name": "Standard",
+            "capacity": 10
+          }
+        },
+        {
+          "name": "gpt-4-turbo",
+          "model": {
+            "format": "OpenAI",
+            "name": "gpt-4",
+            "version": "turbo-2024-04-09"
+          },
+          "sku": {
+            "name": "Standard",
+            "capacity": 10
+          }
+        }
+      ],
+      "metadata": {
+        "description": "OpenAI model deployments"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2024-04-01-preview",
+      "name": "[parameters('openAIName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "OpenAI",
+      "sku": {
+        "name": "S0"
+      },
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('managedIdentityId'))]": {}
+        }
+      },
+      "properties": {
+        "customSubDomainName": "[parameters('openAIName')]",
+        "publicNetworkAccess": "Enabled",
+        "networkAcls": {
+          "defaultAction": "Allow"
+        }
+      }
+    },
+    {
+      "copy": {
+        "name": "deployments",
+        "count": "[length(parameters('modelDeployments'))]"
+      },
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2024-04-01-preview",
+      "name": "[format('{0}/{1}', parameters('openAIName'), parameters('modelDeployments')[copyIndex()].name)]",
+      "sku": "[parameters('modelDeployments')[copyIndex()].sku]",
+      "properties": {
+        "model": "[parameters('modelDeployments')[copyIndex()].model]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAIName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.MachineLearningServices/workspaces",
+      "apiVersion": "2024-04-01",
+      "name": "[parameters('aiHubName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "Hub",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('managedIdentityId'))]": {}
+        }
+      },
+      "properties": {
+        "friendlyName": "[parameters('aiHubName')]",
+        "description": "AI Hub for AI-Trader application",
+        "storageAccount": "[parameters('storageAccountId')]",
+        "keyVault": "[parameters('keyVaultId')]",
+        "applicationInsights": "[parameters('appInsightsId')]",
+        "primaryUserAssignedIdentity": "[parameters('managedIdentityId')]",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.MachineLearningServices/workspaces",
+      "apiVersion": "2024-04-01",
+      "name": "[parameters('aiProjectName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "Project",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('managedIdentityId'))]": {}
+        }
+      },
+      "properties": {
+        "friendlyName": "[parameters('aiProjectName')]",
+        "description": "AI Project for AI-Trader agent orchestration",
+        "hubResourceId": "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('aiHubName'))]",
+        "primaryUserAssignedIdentity": "[parameters('managedIdentityId')]",
+        "publicNetworkAccess": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('aiHubName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.MachineLearningServices/workspaces/connections",
+      "apiVersion": "2024-04-01",
+      "name": "[format('{0}/{1}', parameters('aiHubName'), 'OpenAI-Connection')]",
+      "properties": {
+        "category": "AzureOpenAI",
+        "target": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAIName')), '2024-04-01-preview').endpoint]",
+        "authType": "AAD",
+        "metadata": {
+          "ApiVersion": "2024-02-01",
+          "ResourceId": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAIName'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('aiHubName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAIName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "aiHubId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the AI Hub"
+      },
+      "value": "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('aiHubName'))]"
+    },
+    "aiHubName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the AI Hub"
+      },
+      "value": "[parameters('aiHubName')]"
+    },
+    "aiProjectId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the AI Project"
+      },
+      "value": "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('aiProjectName'))]"
+    },
+    "aiProjectName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the AI Project"
+      },
+      "value": "[parameters('aiProjectName')]"
+    },
+    "openAIId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of Azure OpenAI Service"
+      },
+      "value": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAIName'))]"
+    },
+    "openAIName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of Azure OpenAI Service"
+      },
+      "value": "[parameters('openAIName')]"
+    },
+    "openAIEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Endpoint of Azure OpenAI Service"
+      },
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAIName')), '2024-04-01-preview').endpoint]"
+    },
+    "deployedModels": {
+      "type": "array",
+      "metadata": {
+        "description": "Deployed model names"
+      },
+      "copy": {
+        "count": "[length(parameters('modelDeployments'))]",
+        "input": "[parameters('modelDeployments')[copyIndex()].name]"
+      }
+    }
+  }
+}

@@ -1,0 +1,131 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "10502060525057856384"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for the Key Vault"
+      }
+    },
+    "keyVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Key Vault"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags to apply to resources"
+      }
+    },
+    "tenantId": {
+      "type": "string",
+      "metadata": {
+        "description": "Tenant ID for the Key Vault"
+      }
+    },
+    "enableSoftDelete": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable soft delete"
+      }
+    },
+    "softDeleteRetentionInDays": {
+      "type": "int",
+      "defaultValue": 90,
+      "metadata": {
+        "description": "Soft delete retention in days"
+      }
+    },
+    "enablePurgeProtection": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable purge protection"
+      }
+    },
+    "secrets": {
+      "type": "secureObject",
+      "defaultValue": {},
+      "metadata": {
+        "description": "API keys and secrets to store"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-07-01",
+      "name": "[parameters('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "tenantId": "[parameters('tenantId')]",
+        "enableRbacAuthorization": true,
+        "enableSoftDelete": "[parameters('enableSoftDelete')]",
+        "softDeleteRetentionInDays": "[parameters('softDeleteRetentionInDays')]",
+        "enablePurgeProtection": "[parameters('enablePurgeProtection')]",
+        "networkAcls": {
+          "defaultAction": "Allow",
+          "bypass": "AzureServices"
+        }
+      }
+    },
+    {
+      "copy": {
+        "name": "secretResources",
+        "count": "[length(items(parameters('secrets')))]"
+      },
+      "condition": "[not(empty(parameters('secrets')))]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), items(parameters('secrets'))[copyIndex()].key)]",
+      "properties": {
+        "value": "[items(parameters('secrets'))[copyIndex()].value]",
+        "contentType": "text/plain"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "keyVaultId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Key Vault"
+      },
+      "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Key Vault"
+      },
+      "value": "[parameters('keyVaultName')]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "metadata": {
+        "description": "URI of the Key Vault"
+      },
+      "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), '2023-07-01').vaultUri]"
+    }
+  }
+}

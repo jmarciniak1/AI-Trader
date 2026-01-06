@@ -1,0 +1,554 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "11432350164699698414"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for Container Apps"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags to apply to resources"
+      }
+    },
+    "environmentId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Container Apps Environment"
+      }
+    },
+    "managedIdentityId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Managed Identity"
+      }
+    },
+    "acrLoginServer": {
+      "type": "string",
+      "metadata": {
+        "description": "ACR login server"
+      }
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "metadata": {
+        "description": "Key Vault URI"
+      }
+    },
+    "appInsightsConnectionString": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Application Insights Connection String"
+      }
+    },
+    "imageTag": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Container image tag"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "ca-math-service",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('managedIdentityId'))]": {}
+        }
+      },
+      "properties": {
+        "environmentId": "[parameters('environmentId')]",
+        "configuration": {
+          "ingress": {
+            "external": false,
+            "targetPort": 8000,
+            "transport": "http",
+            "allowInsecure": false
+          },
+          "registries": [
+            {
+              "server": "[parameters('acrLoginServer')]",
+              "identity": "[parameters('managedIdentityId')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "math-service",
+              "image": "[format('{0}/ai-trader/math-service:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "MATH_HTTP_PORT",
+                  "value": "8000"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "value": "[parameters('appInsightsConnectionString')]"
+                },
+                {
+                  "name": "KEY_VAULT_URI",
+                  "value": "[parameters('keyVaultUri')]"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 10
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "ca-search-service",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('managedIdentityId'))]": {}
+        }
+      },
+      "properties": {
+        "environmentId": "[parameters('environmentId')]",
+        "configuration": {
+          "ingress": {
+            "external": false,
+            "targetPort": 8001,
+            "transport": "http",
+            "allowInsecure": false
+          },
+          "registries": [
+            {
+              "server": "[parameters('acrLoginServer')]",
+              "identity": "[parameters('managedIdentityId')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "search-service",
+              "image": "[format('{0}/ai-trader/search-service:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "SEARCH_HTTP_PORT",
+                  "value": "8001"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "value": "[parameters('appInsightsConnectionString')]"
+                },
+                {
+                  "name": "KEY_VAULT_URI",
+                  "value": "[parameters('keyVaultUri')]"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 10
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "ca-trade-service",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('managedIdentityId'))]": {}
+        }
+      },
+      "properties": {
+        "environmentId": "[parameters('environmentId')]",
+        "configuration": {
+          "ingress": {
+            "external": false,
+            "targetPort": 8002,
+            "transport": "http",
+            "allowInsecure": false
+          },
+          "registries": [
+            {
+              "server": "[parameters('acrLoginServer')]",
+              "identity": "[parameters('managedIdentityId')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "trade-service",
+              "image": "[format('{0}/ai-trader/trade-service:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "TRADE_HTTP_PORT",
+                  "value": "8002"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "value": "[parameters('appInsightsConnectionString')]"
+                },
+                {
+                  "name": "KEY_VAULT_URI",
+                  "value": "[parameters('keyVaultUri')]"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 10
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "ca-price-service",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('managedIdentityId'))]": {}
+        }
+      },
+      "properties": {
+        "environmentId": "[parameters('environmentId')]",
+        "configuration": {
+          "ingress": {
+            "external": false,
+            "targetPort": 8003,
+            "transport": "http",
+            "allowInsecure": false
+          },
+          "registries": [
+            {
+              "server": "[parameters('acrLoginServer')]",
+              "identity": "[parameters('managedIdentityId')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "price-service",
+              "image": "[format('{0}/ai-trader/price-service:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "GETPRICE_HTTP_PORT",
+                  "value": "8003"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "value": "[parameters('appInsightsConnectionString')]"
+                },
+                {
+                  "name": "KEY_VAULT_URI",
+                  "value": "[parameters('keyVaultUri')]"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 10
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "ca-crypto-service",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('managedIdentityId'))]": {}
+        }
+      },
+      "properties": {
+        "environmentId": "[parameters('environmentId')]",
+        "configuration": {
+          "ingress": {
+            "external": false,
+            "targetPort": 8005,
+            "transport": "http",
+            "allowInsecure": false
+          },
+          "registries": [
+            {
+              "server": "[parameters('acrLoginServer')]",
+              "identity": "[parameters('managedIdentityId')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "crypto-service",
+              "image": "[format('{0}/ai-trader/crypto-service:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "CRYPTO_HTTP_PORT",
+                  "value": "8005"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "value": "[parameters('appInsightsConnectionString')]"
+                },
+                {
+                  "name": "KEY_VAULT_URI",
+                  "value": "[parameters('keyVaultUri')]"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 10
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "ca-trading-agent",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('managedIdentityId'))]": {}
+        }
+      },
+      "properties": {
+        "environmentId": "[parameters('environmentId')]",
+        "configuration": {
+          "ingress": {
+            "external": true,
+            "targetPort": 8080,
+            "transport": "http",
+            "allowInsecure": false
+          },
+          "registries": [
+            {
+              "server": "[parameters('acrLoginServer')]",
+              "identity": "[parameters('managedIdentityId')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "trading-agent",
+              "image": "[format('{0}/ai-trader/trading-agent:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+              "resources": {
+                "cpu": "[json('1.0')]",
+                "memory": "2Gi"
+              },
+              "env": [
+                {
+                  "name": "MATH_HTTP_PORT",
+                  "value": "8000"
+                },
+                {
+                  "name": "SEARCH_HTTP_PORT",
+                  "value": "8001"
+                },
+                {
+                  "name": "TRADE_HTTP_PORT",
+                  "value": "8002"
+                },
+                {
+                  "name": "GETPRICE_HTTP_PORT",
+                  "value": "8003"
+                },
+                {
+                  "name": "CRYPTO_HTTP_PORT",
+                  "value": "8005"
+                },
+                {
+                  "name": "MATH_SERVICE_URL",
+                  "value": "http://ca-math-service.internal"
+                },
+                {
+                  "name": "SEARCH_SERVICE_URL",
+                  "value": "http://ca-search-service.internal"
+                },
+                {
+                  "name": "TRADE_SERVICE_URL",
+                  "value": "http://ca-trade-service.internal"
+                },
+                {
+                  "name": "PRICE_SERVICE_URL",
+                  "value": "http://ca-price-service.internal"
+                },
+                {
+                  "name": "CRYPTO_SERVICE_URL",
+                  "value": "http://ca-crypto-service.internal"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "value": "[parameters('appInsightsConnectionString')]"
+                },
+                {
+                  "name": "KEY_VAULT_URI",
+                  "value": "[parameters('keyVaultUri')]"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 20
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "ca-web-ui",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('managedIdentityId'))]": {}
+        }
+      },
+      "properties": {
+        "environmentId": "[parameters('environmentId')]",
+        "configuration": {
+          "ingress": {
+            "external": true,
+            "targetPort": 8888,
+            "transport": "http",
+            "allowInsecure": false
+          },
+          "registries": [
+            {
+              "server": "[parameters('acrLoginServer')]",
+              "identity": "[parameters('managedIdentityId')]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "web-ui",
+              "image": "[format('{0}/ai-trader/web-ui:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "PORT",
+                  "value": "8888"
+                },
+                {
+                  "name": "TRADING_AGENT_URL",
+                  "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', 'ca-trading-agent'), '2024-03-01').configuration.ingress.fqdn)]"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "value": "[parameters('appInsightsConnectionString')]"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 10
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/containerApps', 'ca-trading-agent')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "tradingAgentFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "FQDN of the Trading Agent"
+      },
+      "value": "[reference(resourceId('Microsoft.App/containerApps', 'ca-trading-agent'), '2024-03-01').configuration.ingress.fqdn]"
+    },
+    "webUiFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "FQDN of the Web UI"
+      },
+      "value": "[reference(resourceId('Microsoft.App/containerApps', 'ca-web-ui'), '2024-03-01').configuration.ingress.fqdn]"
+    },
+    "mcpServiceFqdns": {
+      "type": "object",
+      "metadata": {
+        "description": "Internal FQDNs of MCP services"
+      },
+      "value": {
+        "math": "[reference(resourceId('Microsoft.App/containerApps', 'ca-math-service'), '2024-03-01').configuration.ingress.fqdn]",
+        "search": "[reference(resourceId('Microsoft.App/containerApps', 'ca-search-service'), '2024-03-01').configuration.ingress.fqdn]",
+        "trade": "[reference(resourceId('Microsoft.App/containerApps', 'ca-trade-service'), '2024-03-01').configuration.ingress.fqdn]",
+        "price": "[reference(resourceId('Microsoft.App/containerApps', 'ca-price-service'), '2024-03-01').configuration.ingress.fqdn]",
+        "crypto": "[reference(resourceId('Microsoft.App/containerApps', 'ca-crypto-service'), '2024-03-01').configuration.ingress.fqdn]"
+      }
+    }
+  }
+}

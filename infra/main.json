@@ -1,0 +1,2123 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "3023973992139823579"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for resources"
+      }
+    },
+    "environment": {
+      "type": "string",
+      "allowedValues": [
+        "dev",
+        "staging",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Environment name (dev, staging, prod)"
+      }
+    },
+    "tenantId": {
+      "type": "string",
+      "metadata": {
+        "description": "Tenant ID"
+      }
+    },
+    "baseName": {
+      "type": "string",
+      "defaultValue": "aitrader",
+      "metadata": {
+        "description": "Base name for resources"
+      }
+    },
+    "imageTag": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Container image tag"
+      }
+    },
+    "secrets": {
+      "type": "secureObject",
+      "defaultValue": {},
+      "metadata": {
+        "description": "API keys and secrets (should be from Key Vault or parameter file)"
+      }
+    }
+  },
+  "variables": {
+    "resourceSuffix": "[format('{0}-{1}', parameters('environment'), uniqueString(resourceGroup().id))]",
+    "identityName": "[format('{0}-identity-{1}', parameters('baseName'), variables('resourceSuffix'))]",
+    "keyVaultName": "[take(format('{0}-kv-{1}', parameters('baseName'), variables('resourceSuffix')), 24)]",
+    "storageAccountName": "[take(replace(format('{0}st{1}', parameters('baseName'), variables('resourceSuffix')), '-', ''), 24)]",
+    "acrName": "[take(replace(format('{0}acr{1}', parameters('baseName'), variables('resourceSuffix')), '-', ''), 50)]",
+    "logAnalyticsName": "[format('{0}-logs-{1}', parameters('baseName'), variables('resourceSuffix'))]",
+    "appInsightsName": "[format('{0}-insights-{1}', parameters('baseName'), variables('resourceSuffix'))]",
+    "containerAppsEnvName": "[format('{0}-env-{1}', parameters('baseName'), variables('resourceSuffix'))]",
+    "aiHubName": "[format('{0}-ai-hub-{1}', parameters('baseName'), variables('resourceSuffix'))]",
+    "aiProjectName": "[format('{0}-ai-project-{1}', parameters('baseName'), variables('resourceSuffix'))]",
+    "openAIName": "[format('{0}-openai-{1}', parameters('baseName'), variables('resourceSuffix'))]",
+    "tags": {
+      "Environment": "[parameters('environment')]",
+      "Application": "AI-Trader",
+      "ManagedBy": "Bicep"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "identity-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "identityName": {
+            "value": "[variables('identityName')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "9038689436259688301"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location for the managed identity"
+              }
+            },
+            "identityName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the managed identity"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to resources"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[parameters('identityName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]"
+            }
+          ],
+          "outputs": {
+            "identityId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the managed identity"
+              },
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('identityName'))]"
+            },
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Principal ID of the managed identity"
+              },
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('identityName')), '2023-01-31').principalId]"
+            },
+            "clientId": {
+              "type": "string",
+              "metadata": {
+                "description": "Client ID of the managed identity"
+              },
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('identityName')), '2023-01-31').clientId]"
+            },
+            "identityName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the managed identity"
+              },
+              "value": "[parameters('identityName')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "monitoring-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "logAnalyticsName": {
+            "value": "[variables('logAnalyticsName')]"
+          },
+          "appInsightsName": {
+            "value": "[variables('appInsightsName')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "retentionInDays": "[if(equals(parameters('environment'), 'prod'), createObject('value', 90), createObject('value', 30))]"
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "16764090668251611630"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location for monitoring resources"
+              }
+            },
+            "logAnalyticsName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Log Analytics Workspace"
+              }
+            },
+            "appInsightsName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of Application Insights"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to resources"
+              }
+            },
+            "retentionInDays": {
+              "type": "int",
+              "defaultValue": 30,
+              "metadata": {
+                "description": "Log Analytics retention in days"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[parameters('logAnalyticsName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": "[parameters('retentionInDays')]",
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled"
+              }
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[parameters('appInsightsName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]",
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "logAnalyticsId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Log Analytics Workspace"
+              },
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName'))]"
+            },
+            "logAnalyticsName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Log Analytics Workspace"
+              },
+              "value": "[parameters('logAnalyticsName')]"
+            },
+            "logAnalyticsCustomerId": {
+              "type": "string",
+              "metadata": {
+                "description": "Customer ID of the Log Analytics Workspace"
+              },
+              "value": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName')), '2023-09-01').customerId]"
+            },
+            "logAnalyticsSharedKey": {
+              "type": "string",
+              "metadata": {
+                "description": "Primary Shared Key of the Log Analytics Workspace"
+              },
+              "value": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsName')), '2023-09-01').primarySharedKey]"
+            },
+            "appInsightsId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of Application Insights"
+              },
+              "value": "[resourceId('Microsoft.Insights/components', parameters('appInsightsName'))]"
+            },
+            "appInsightsName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of Application Insights"
+              },
+              "value": "[parameters('appInsightsName')]"
+            },
+            "appInsightsInstrumentationKey": {
+              "type": "string",
+              "metadata": {
+                "description": "Instrumentation Key of Application Insights"
+              },
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').InstrumentationKey]"
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "metadata": {
+                "description": "Connection String of Application Insights"
+              },
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').ConnectionString]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "keyvault-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "keyVaultName": {
+            "value": "[variables('keyVaultName')]"
+          },
+          "tenantId": {
+            "value": "[parameters('tenantId')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "secrets": {
+            "value": "[parameters('secrets')]"
+          },
+          "enablePurgeProtection": {
+            "value": "[equals(parameters('environment'), 'prod')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "10502060525057856384"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location for the Key Vault"
+              }
+            },
+            "keyVaultName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Key Vault"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to resources"
+              }
+            },
+            "tenantId": {
+              "type": "string",
+              "metadata": {
+                "description": "Tenant ID for the Key Vault"
+              }
+            },
+            "enableSoftDelete": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Enable soft delete"
+              }
+            },
+            "softDeleteRetentionInDays": {
+              "type": "int",
+              "defaultValue": 90,
+              "metadata": {
+                "description": "Soft delete retention in days"
+              }
+            },
+            "enablePurgeProtection": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Enable purge protection"
+              }
+            },
+            "secrets": {
+              "type": "secureObject",
+              "defaultValue": {},
+              "metadata": {
+                "description": "API keys and secrets to store"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('keyVaultName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "tenantId": "[parameters('tenantId')]",
+                "enableRbacAuthorization": true,
+                "enableSoftDelete": "[parameters('enableSoftDelete')]",
+                "softDeleteRetentionInDays": "[parameters('softDeleteRetentionInDays')]",
+                "enablePurgeProtection": "[parameters('enablePurgeProtection')]",
+                "networkAcls": {
+                  "defaultAction": "Allow",
+                  "bypass": "AzureServices"
+                }
+              }
+            },
+            {
+              "copy": {
+                "name": "secretResources",
+                "count": "[length(items(parameters('secrets')))]"
+              },
+              "condition": "[not(empty(parameters('secrets')))]",
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', parameters('keyVaultName'), items(parameters('secrets'))[copyIndex()].key)]",
+              "properties": {
+                "value": "[items(parameters('secrets'))[copyIndex()].value]",
+                "contentType": "text/plain"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "keyVaultId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Key Vault"
+              },
+              "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+            },
+            "keyVaultName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Key Vault"
+              },
+              "value": "[parameters('keyVaultName')]"
+            },
+            "keyVaultUri": {
+              "type": "string",
+              "metadata": {
+                "description": "URI of the Key Vault"
+              },
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), '2023-07-01').vaultUri]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "storage-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "storageAccountName": {
+            "value": "[variables('storageAccountName')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "skuName": "[if(equals(parameters('environment'), 'prod'), createObject('value', 'Standard_ZRS'), createObject('value', 'Standard_LRS'))]",
+          "containerNames": {
+            "value": [
+              "price-data",
+              "agent-data",
+              "logs"
+            ]
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "7416581714149938746"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location for the storage account"
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the storage account"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to resources"
+              }
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "Standard_LRS",
+              "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Standard_ZRS",
+                "Premium_LRS"
+              ],
+              "metadata": {
+                "description": "Storage account SKU"
+              }
+            },
+            "containerNames": {
+              "type": "array",
+              "defaultValue": [
+                "price-data",
+                "agent-data",
+                "logs"
+              ],
+              "metadata": {
+                "description": "Blob containers to create"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-01-01",
+              "name": "[parameters('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "[parameters('skuName')]"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "accessTier": "Hot",
+                "supportsHttpsTrafficOnly": true,
+                "minimumTlsVersion": "TLS1_2",
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": true,
+                "networkAcls": {
+                  "defaultAction": "Allow",
+                  "bypass": "AzureServices"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "containers",
+                "count": "[length(parameters('containerNames'))]"
+              },
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', parameters('containerNames')[copyIndex()])]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the storage account"
+              },
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            },
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the storage account"
+              },
+              "value": "[parameters('storageAccountName')]"
+            },
+            "primaryEndpoints": {
+              "type": "object",
+              "metadata": {
+                "description": "Primary endpoints for the storage account"
+              },
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').primaryEndpoints]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "acr-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "acrName": {
+            "value": "[variables('acrName')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "skuName": "[if(equals(parameters('environment'), 'prod'), createObject('value', 'Standard'), createObject('value', 'Basic'))]"
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "3282747058305582865"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location for the container registry"
+              }
+            },
+            "acrName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the container registry"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to resources"
+              }
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "Basic",
+              "allowedValues": [
+                "Basic",
+                "Standard",
+                "Premium"
+              ],
+              "metadata": {
+                "description": "ACR SKU"
+              }
+            },
+            "adminUserEnabled": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Enable admin user"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ContainerRegistry/registries",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('acrName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "[parameters('skuName')]"
+              },
+              "properties": {
+                "adminUserEnabled": "[parameters('adminUserEnabled')]",
+                "publicNetworkAccess": "Enabled",
+                "networkRuleBypassOptions": "AzureServices",
+                "zoneRedundancy": "[if(equals(parameters('skuName'), 'Premium'), 'Enabled', 'Disabled')]"
+              }
+            }
+          ],
+          "outputs": {
+            "acrId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the container registry"
+              },
+              "value": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]"
+            },
+            "acrName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the container registry"
+              },
+              "value": "[parameters('acrName')]"
+            },
+            "loginServer": {
+              "type": "string",
+              "metadata": {
+                "description": "Login server of the container registry"
+              },
+              "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), '2023-07-01').loginServer]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "ai-foundry-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "aiHubName": {
+            "value": "[variables('aiHubName')]"
+          },
+          "aiProjectName": {
+            "value": "[variables('aiProjectName')]"
+          },
+          "openAIName": {
+            "value": "[variables('openAIName')]"
+          },
+          "storageAccountId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2025-04-01').outputs.storageAccountId.value]"
+          },
+          "keyVaultId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyvault-deployment'), '2025-04-01').outputs.keyVaultId.value]"
+          },
+          "appInsightsId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.appInsightsId.value]"
+          },
+          "managedIdentityId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'identity-deployment'), '2025-04-01').outputs.identityId.value]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "modelDeployments": {
+            "value": [
+              {
+                "name": "gpt-4o",
+                "model": {
+                  "format": "OpenAI",
+                  "name": "gpt-4o",
+                  "version": "2024-08-06"
+                },
+                "sku": {
+                  "name": "Standard",
+                  "capacity": "[if(equals(parameters('environment'), 'prod'), 20, 10)]"
+                }
+              },
+              {
+                "name": "gpt-4-turbo",
+                "model": {
+                  "format": "OpenAI",
+                  "name": "gpt-4",
+                  "version": "turbo-2024-04-09"
+                },
+                "sku": {
+                  "name": "Standard",
+                  "capacity": "[if(equals(parameters('environment'), 'prod'), 20, 10)]"
+                }
+              }
+            ]
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "16058133464390155048"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location for AI resources"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to resources"
+              }
+            },
+            "aiHubName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the AI Hub"
+              }
+            },
+            "aiProjectName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the AI Project"
+              }
+            },
+            "openAIName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Azure OpenAI Service"
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Storage Account"
+              }
+            },
+            "keyVaultId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Key Vault"
+              }
+            },
+            "appInsightsId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of Application Insights"
+              }
+            },
+            "managedIdentityId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Managed Identity"
+              }
+            },
+            "modelDeployments": {
+              "type": "array",
+              "defaultValue": [
+                {
+                  "name": "gpt-4o",
+                  "model": {
+                    "format": "OpenAI",
+                    "name": "gpt-4o",
+                    "version": "2024-08-06"
+                  },
+                  "sku": {
+                    "name": "Standard",
+                    "capacity": 10
+                  }
+                },
+                {
+                  "name": "gpt-4-turbo",
+                  "model": {
+                    "format": "OpenAI",
+                    "name": "gpt-4",
+                    "version": "turbo-2024-04-09"
+                  },
+                  "sku": {
+                    "name": "Standard",
+                    "capacity": 10
+                  }
+                }
+              ],
+              "metadata": {
+                "description": "OpenAI model deployments"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.CognitiveServices/accounts",
+              "apiVersion": "2024-04-01-preview",
+              "name": "[parameters('openAIName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "OpenAI",
+              "sku": {
+                "name": "S0"
+              },
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('managedIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "customSubDomainName": "[parameters('openAIName')]",
+                "publicNetworkAccess": "Enabled",
+                "networkAcls": {
+                  "defaultAction": "Allow"
+                }
+              }
+            },
+            {
+              "copy": {
+                "name": "deployments",
+                "count": "[length(parameters('modelDeployments'))]"
+              },
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-04-01-preview",
+              "name": "[format('{0}/{1}', parameters('openAIName'), parameters('modelDeployments')[copyIndex()].name)]",
+              "sku": "[parameters('modelDeployments')[copyIndex()].sku]",
+              "properties": {
+                "model": "[parameters('modelDeployments')[copyIndex()].model]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAIName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.MachineLearningServices/workspaces",
+              "apiVersion": "2024-04-01",
+              "name": "[parameters('aiHubName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "Hub",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('managedIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "friendlyName": "[parameters('aiHubName')]",
+                "description": "AI Hub for AI-Trader application",
+                "storageAccount": "[parameters('storageAccountId')]",
+                "keyVault": "[parameters('keyVaultId')]",
+                "applicationInsights": "[parameters('appInsightsId')]",
+                "primaryUserAssignedIdentity": "[parameters('managedIdentityId')]",
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            {
+              "type": "Microsoft.MachineLearningServices/workspaces",
+              "apiVersion": "2024-04-01",
+              "name": "[parameters('aiProjectName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "Project",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('managedIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "friendlyName": "[parameters('aiProjectName')]",
+                "description": "AI Project for AI-Trader agent orchestration",
+                "hubResourceId": "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('aiHubName'))]",
+                "primaryUserAssignedIdentity": "[parameters('managedIdentityId')]",
+                "publicNetworkAccess": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('aiHubName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.MachineLearningServices/workspaces/connections",
+              "apiVersion": "2024-04-01",
+              "name": "[format('{0}/{1}', parameters('aiHubName'), 'OpenAI-Connection')]",
+              "properties": {
+                "category": "AzureOpenAI",
+                "target": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAIName')), '2024-04-01-preview').endpoint]",
+                "authType": "AAD",
+                "metadata": {
+                  "ApiVersion": "2024-02-01",
+                  "ResourceId": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAIName'))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('aiHubName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAIName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "aiHubId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the AI Hub"
+              },
+              "value": "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('aiHubName'))]"
+            },
+            "aiHubName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the AI Hub"
+              },
+              "value": "[parameters('aiHubName')]"
+            },
+            "aiProjectId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the AI Project"
+              },
+              "value": "[resourceId('Microsoft.MachineLearningServices/workspaces', parameters('aiProjectName'))]"
+            },
+            "aiProjectName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the AI Project"
+              },
+              "value": "[parameters('aiProjectName')]"
+            },
+            "openAIId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of Azure OpenAI Service"
+              },
+              "value": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAIName'))]"
+            },
+            "openAIName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of Azure OpenAI Service"
+              },
+              "value": "[parameters('openAIName')]"
+            },
+            "openAIEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Endpoint of Azure OpenAI Service"
+              },
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAIName')), '2024-04-01-preview').endpoint]"
+            },
+            "deployedModels": {
+              "type": "array",
+              "metadata": {
+                "description": "Deployed model names"
+              },
+              "copy": {
+                "count": "[length(parameters('modelDeployments'))]",
+                "input": "[parameters('modelDeployments')[copyIndex()].name]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'identity-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'keyvault-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'monitoring-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'storage-deployment')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "role-assignments-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'identity-deployment'), '2025-04-01').outputs.principalId.value]"
+          },
+          "keyVaultId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyvault-deployment'), '2025-04-01').outputs.keyVaultId.value]"
+          },
+          "storageAccountId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2025-04-01').outputs.storageAccountId.value]"
+          },
+          "acrId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'acr-deployment'), '2025-04-01').outputs.acrId.value]"
+          },
+          "openAIId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.openAIId.value]"
+          },
+          "aiProjectId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.aiProjectId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "17603611047765681139"
+            }
+          },
+          "parameters": {
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Principal ID of the Managed Identity"
+              }
+            },
+            "keyVaultId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Key Vault"
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Storage Account"
+              }
+            },
+            "acrId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Container Registry"
+              }
+            },
+            "openAIId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Azure OpenAI Service"
+              }
+            },
+            "aiProjectId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the AI Project"
+              }
+            }
+          },
+          "variables": {
+            "roles": {
+              "keyVaultSecretsUser": "4633458b-17de-408a-b874-0445c86b69e6",
+              "storageBlobDataContributor": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
+              "acrPull": "7f951dda-4ed3-4680-a7ca-43fe172d538d",
+              "cognitiveServicesOpenAIUser": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd",
+              "azureMLDataScientist": "f6c7c914-8db3-469d-8ca1-694a8f32e121"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('keyVaultId'), parameters('principalId'), variables('roles').keyVaultSecretsUser)]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roles').keyVaultSecretsUser)]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('storageAccountId'), parameters('principalId'), variables('roles').storageBlobDataContributor)]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roles').storageBlobDataContributor)]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('acrId'), parameters('principalId'), variables('roles').acrPull)]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roles').acrPull)]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('openAIId'), parameters('principalId'), variables('roles').cognitiveServicesOpenAIUser)]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roles').cognitiveServicesOpenAIUser)]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('aiProjectId'), parameters('principalId'), variables('roles').azureMLDataScientist)]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roles').azureMLDataScientist)]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ],
+          "outputs": {
+            "roleAssignmentIds": {
+              "type": "object",
+              "metadata": {
+                "description": "Role assignment IDs"
+              },
+              "value": {
+                "keyVaultSecretsUser": "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('keyVaultId'), parameters('principalId'), variables('roles').keyVaultSecretsUser))]",
+                "storageBlobDataContributor": "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('storageAccountId'), parameters('principalId'), variables('roles').storageBlobDataContributor))]",
+                "acrPull": "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('acrId'), parameters('principalId'), variables('roles').acrPull))]",
+                "cognitiveServicesOpenAIUser": "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('openAIId'), parameters('principalId'), variables('roles').cognitiveServicesOpenAIUser))]",
+                "azureMLDataScientist": "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('aiProjectId'), parameters('principalId'), variables('roles').azureMLDataScientist))]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'acr-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'identity-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'keyvault-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'storage-deployment')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "container-apps-env-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "environmentName": {
+            "value": "[variables('containerAppsEnvName')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "logAnalyticsCustomerId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.logAnalyticsCustomerId.value]"
+          },
+          "logAnalyticsSharedKey": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.logAnalyticsSharedKey.value]"
+          },
+          "zoneRedundant": {
+            "value": "[equals(parameters('environment'), 'prod')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "10055858528003181239"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location for the Container Apps Environment"
+              }
+            },
+            "environmentName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Container Apps Environment"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to resources"
+              }
+            },
+            "logAnalyticsCustomerId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Log Analytics Workspace"
+              }
+            },
+            "logAnalyticsSharedKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Shared Key of the Log Analytics Workspace"
+              }
+            },
+            "zoneRedundant": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Enable zone redundancy"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.App/managedEnvironments",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('environmentName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "appLogsConfiguration": {
+                  "destination": "log-analytics",
+                  "logAnalyticsConfiguration": {
+                    "customerId": "[parameters('logAnalyticsCustomerId')]",
+                    "sharedKey": "[parameters('logAnalyticsSharedKey')]"
+                  }
+                },
+                "zoneRedundant": "[parameters('zoneRedundant')]",
+                "workloadProfiles": [
+                  {
+                    "name": "Consumption",
+                    "workloadProfileType": "Consumption"
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "environmentId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Container Apps Environment"
+              },
+              "value": "[resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))]"
+            },
+            "environmentName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Container Apps Environment"
+              },
+              "value": "[parameters('environmentName')]"
+            },
+            "defaultDomain": {
+              "type": "string",
+              "metadata": {
+                "description": "Default domain of the Container Apps Environment"
+              },
+              "value": "[reference(resourceId('Microsoft.App/managedEnvironments', parameters('environmentName')), '2024-03-01').defaultDomain]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'monitoring-deployment')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "container-apps-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "environmentId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'container-apps-env-deployment'), '2025-04-01').outputs.environmentId.value]"
+          },
+          "managedIdentityId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'identity-deployment'), '2025-04-01').outputs.identityId.value]"
+          },
+          "acrLoginServer": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'acr-deployment'), '2025-04-01').outputs.loginServer.value]"
+          },
+          "keyVaultUri": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyvault-deployment'), '2025-04-01').outputs.keyVaultUri.value]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.appInsightsConnectionString.value]"
+          },
+          "imageTag": {
+            "value": "[parameters('imageTag')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "11432350164699698414"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Location for Container Apps"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags to apply to resources"
+              }
+            },
+            "environmentId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Container Apps Environment"
+              }
+            },
+            "managedIdentityId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Managed Identity"
+              }
+            },
+            "acrLoginServer": {
+              "type": "string",
+              "metadata": {
+                "description": "ACR login server"
+              }
+            },
+            "keyVaultUri": {
+              "type": "string",
+              "metadata": {
+                "description": "Key Vault URI"
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Application Insights Connection String"
+              }
+            },
+            "imageTag": {
+              "type": "string",
+              "defaultValue": "latest",
+              "metadata": {
+                "description": "Container image tag"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "ca-math-service",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('managedIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "environmentId": "[parameters('environmentId')]",
+                "configuration": {
+                  "ingress": {
+                    "external": false,
+                    "targetPort": 8000,
+                    "transport": "http",
+                    "allowInsecure": false
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('acrLoginServer')]",
+                      "identity": "[parameters('managedIdentityId')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "math-service",
+                      "image": "[format('{0}/ai-trader/math-service:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      },
+                      "env": [
+                        {
+                          "name": "MATH_HTTP_PORT",
+                          "value": "8000"
+                        },
+                        {
+                          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                          "value": "[parameters('appInsightsConnectionString')]"
+                        },
+                        {
+                          "name": "KEY_VAULT_URI",
+                          "value": "[parameters('keyVaultUri')]"
+                        }
+                      ]
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 10
+                  }
+                }
+              }
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "ca-search-service",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('managedIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "environmentId": "[parameters('environmentId')]",
+                "configuration": {
+                  "ingress": {
+                    "external": false,
+                    "targetPort": 8001,
+                    "transport": "http",
+                    "allowInsecure": false
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('acrLoginServer')]",
+                      "identity": "[parameters('managedIdentityId')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "search-service",
+                      "image": "[format('{0}/ai-trader/search-service:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      },
+                      "env": [
+                        {
+                          "name": "SEARCH_HTTP_PORT",
+                          "value": "8001"
+                        },
+                        {
+                          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                          "value": "[parameters('appInsightsConnectionString')]"
+                        },
+                        {
+                          "name": "KEY_VAULT_URI",
+                          "value": "[parameters('keyVaultUri')]"
+                        }
+                      ]
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 10
+                  }
+                }
+              }
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "ca-trade-service",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('managedIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "environmentId": "[parameters('environmentId')]",
+                "configuration": {
+                  "ingress": {
+                    "external": false,
+                    "targetPort": 8002,
+                    "transport": "http",
+                    "allowInsecure": false
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('acrLoginServer')]",
+                      "identity": "[parameters('managedIdentityId')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "trade-service",
+                      "image": "[format('{0}/ai-trader/trade-service:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      },
+                      "env": [
+                        {
+                          "name": "TRADE_HTTP_PORT",
+                          "value": "8002"
+                        },
+                        {
+                          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                          "value": "[parameters('appInsightsConnectionString')]"
+                        },
+                        {
+                          "name": "KEY_VAULT_URI",
+                          "value": "[parameters('keyVaultUri')]"
+                        }
+                      ]
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 10
+                  }
+                }
+              }
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "ca-price-service",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('managedIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "environmentId": "[parameters('environmentId')]",
+                "configuration": {
+                  "ingress": {
+                    "external": false,
+                    "targetPort": 8003,
+                    "transport": "http",
+                    "allowInsecure": false
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('acrLoginServer')]",
+                      "identity": "[parameters('managedIdentityId')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "price-service",
+                      "image": "[format('{0}/ai-trader/price-service:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      },
+                      "env": [
+                        {
+                          "name": "GETPRICE_HTTP_PORT",
+                          "value": "8003"
+                        },
+                        {
+                          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                          "value": "[parameters('appInsightsConnectionString')]"
+                        },
+                        {
+                          "name": "KEY_VAULT_URI",
+                          "value": "[parameters('keyVaultUri')]"
+                        }
+                      ]
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 10
+                  }
+                }
+              }
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "ca-crypto-service",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('managedIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "environmentId": "[parameters('environmentId')]",
+                "configuration": {
+                  "ingress": {
+                    "external": false,
+                    "targetPort": 8005,
+                    "transport": "http",
+                    "allowInsecure": false
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('acrLoginServer')]",
+                      "identity": "[parameters('managedIdentityId')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "crypto-service",
+                      "image": "[format('{0}/ai-trader/crypto-service:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      },
+                      "env": [
+                        {
+                          "name": "CRYPTO_HTTP_PORT",
+                          "value": "8005"
+                        },
+                        {
+                          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                          "value": "[parameters('appInsightsConnectionString')]"
+                        },
+                        {
+                          "name": "KEY_VAULT_URI",
+                          "value": "[parameters('keyVaultUri')]"
+                        }
+                      ]
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 10
+                  }
+                }
+              }
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "ca-trading-agent",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('managedIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "environmentId": "[parameters('environmentId')]",
+                "configuration": {
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 8080,
+                    "transport": "http",
+                    "allowInsecure": false
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('acrLoginServer')]",
+                      "identity": "[parameters('managedIdentityId')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "trading-agent",
+                      "image": "[format('{0}/ai-trader/trading-agent:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+                      "resources": {
+                        "cpu": "[json('1.0')]",
+                        "memory": "2Gi"
+                      },
+                      "env": [
+                        {
+                          "name": "MATH_HTTP_PORT",
+                          "value": "8000"
+                        },
+                        {
+                          "name": "SEARCH_HTTP_PORT",
+                          "value": "8001"
+                        },
+                        {
+                          "name": "TRADE_HTTP_PORT",
+                          "value": "8002"
+                        },
+                        {
+                          "name": "GETPRICE_HTTP_PORT",
+                          "value": "8003"
+                        },
+                        {
+                          "name": "CRYPTO_HTTP_PORT",
+                          "value": "8005"
+                        },
+                        {
+                          "name": "MATH_SERVICE_URL",
+                          "value": "http://ca-math-service.internal"
+                        },
+                        {
+                          "name": "SEARCH_SERVICE_URL",
+                          "value": "http://ca-search-service.internal"
+                        },
+                        {
+                          "name": "TRADE_SERVICE_URL",
+                          "value": "http://ca-trade-service.internal"
+                        },
+                        {
+                          "name": "PRICE_SERVICE_URL",
+                          "value": "http://ca-price-service.internal"
+                        },
+                        {
+                          "name": "CRYPTO_SERVICE_URL",
+                          "value": "http://ca-crypto-service.internal"
+                        },
+                        {
+                          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                          "value": "[parameters('appInsightsConnectionString')]"
+                        },
+                        {
+                          "name": "KEY_VAULT_URI",
+                          "value": "[parameters('keyVaultUri')]"
+                        }
+                      ]
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 20
+                  }
+                }
+              }
+            },
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "ca-web-ui",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('managedIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "environmentId": "[parameters('environmentId')]",
+                "configuration": {
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 8888,
+                    "transport": "http",
+                    "allowInsecure": false
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('acrLoginServer')]",
+                      "identity": "[parameters('managedIdentityId')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "web-ui",
+                      "image": "[format('{0}/ai-trader/web-ui:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      },
+                      "env": [
+                        {
+                          "name": "PORT",
+                          "value": "8888"
+                        },
+                        {
+                          "name": "TRADING_AGENT_URL",
+                          "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', 'ca-trading-agent'), '2024-03-01').configuration.ingress.fqdn)]"
+                        },
+                        {
+                          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                          "value": "[parameters('appInsightsConnectionString')]"
+                        }
+                      ]
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 10
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/containerApps', 'ca-trading-agent')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "tradingAgentFqdn": {
+              "type": "string",
+              "metadata": {
+                "description": "FQDN of the Trading Agent"
+              },
+              "value": "[reference(resourceId('Microsoft.App/containerApps', 'ca-trading-agent'), '2024-03-01').configuration.ingress.fqdn]"
+            },
+            "webUiFqdn": {
+              "type": "string",
+              "metadata": {
+                "description": "FQDN of the Web UI"
+              },
+              "value": "[reference(resourceId('Microsoft.App/containerApps', 'ca-web-ui'), '2024-03-01').configuration.ingress.fqdn]"
+            },
+            "mcpServiceFqdns": {
+              "type": "object",
+              "metadata": {
+                "description": "Internal FQDNs of MCP services"
+              },
+              "value": {
+                "math": "[reference(resourceId('Microsoft.App/containerApps', 'ca-math-service'), '2024-03-01').configuration.ingress.fqdn]",
+                "search": "[reference(resourceId('Microsoft.App/containerApps', 'ca-search-service'), '2024-03-01').configuration.ingress.fqdn]",
+                "trade": "[reference(resourceId('Microsoft.App/containerApps', 'ca-trade-service'), '2024-03-01').configuration.ingress.fqdn]",
+                "price": "[reference(resourceId('Microsoft.App/containerApps', 'ca-price-service'), '2024-03-01').configuration.ingress.fqdn]",
+                "crypto": "[reference(resourceId('Microsoft.App/containerApps', 'ca-crypto-service'), '2024-03-01').configuration.ingress.fqdn]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'acr-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'container-apps-env-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'identity-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'keyvault-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'monitoring-deployment')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "resourceGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource Group Name"
+      },
+      "value": "[resourceGroup().name]"
+    },
+    "identity": {
+      "type": "object",
+      "metadata": {
+        "description": "Managed Identity Details"
+      },
+      "value": {
+        "id": "[reference(resourceId('Microsoft.Resources/deployments', 'identity-deployment'), '2025-04-01').outputs.identityId.value]",
+        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', 'identity-deployment'), '2025-04-01').outputs.principalId.value]",
+        "clientId": "[reference(resourceId('Microsoft.Resources/deployments', 'identity-deployment'), '2025-04-01').outputs.clientId.value]",
+        "name": "[reference(resourceId('Microsoft.Resources/deployments', 'identity-deployment'), '2025-04-01').outputs.identityName.value]"
+      }
+    },
+    "keyVault": {
+      "type": "object",
+      "metadata": {
+        "description": "Key Vault Details"
+      },
+      "value": {
+        "id": "[reference(resourceId('Microsoft.Resources/deployments', 'keyvault-deployment'), '2025-04-01').outputs.keyVaultId.value]",
+        "name": "[reference(resourceId('Microsoft.Resources/deployments', 'keyvault-deployment'), '2025-04-01').outputs.keyVaultName.value]",
+        "uri": "[reference(resourceId('Microsoft.Resources/deployments', 'keyvault-deployment'), '2025-04-01').outputs.keyVaultUri.value]"
+      }
+    },
+    "storage": {
+      "type": "object",
+      "metadata": {
+        "description": "Storage Account Details"
+      },
+      "value": {
+        "id": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2025-04-01').outputs.storageAccountId.value]",
+        "name": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2025-04-01').outputs.storageAccountName.value]",
+        "endpoints": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2025-04-01').outputs.primaryEndpoints.value]"
+      }
+    },
+    "containerRegistry": {
+      "type": "object",
+      "metadata": {
+        "description": "Container Registry Details"
+      },
+      "value": {
+        "id": "[reference(resourceId('Microsoft.Resources/deployments', 'acr-deployment'), '2025-04-01').outputs.acrId.value]",
+        "name": "[reference(resourceId('Microsoft.Resources/deployments', 'acr-deployment'), '2025-04-01').outputs.acrName.value]",
+        "loginServer": "[reference(resourceId('Microsoft.Resources/deployments', 'acr-deployment'), '2025-04-01').outputs.loginServer.value]"
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "metadata": {
+        "description": "Monitoring Details"
+      },
+      "value": {
+        "logAnalyticsId": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.logAnalyticsId.value]",
+        "logAnalyticsName": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.logAnalyticsName.value]",
+        "appInsightsId": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.appInsightsId.value]",
+        "appInsightsName": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.appInsightsName.value]",
+        "appInsightsInstrumentationKey": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring-deployment'), '2025-04-01').outputs.appInsightsInstrumentationKey.value]"
+      }
+    },
+    "aiServices": {
+      "type": "object",
+      "metadata": {
+        "description": "AI Services Details"
+      },
+      "value": {
+        "aiHubId": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.aiHubId.value]",
+        "aiHubName": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.aiHubName.value]",
+        "aiProjectId": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.aiProjectId.value]",
+        "aiProjectName": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.aiProjectName.value]",
+        "openAIId": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.openAIId.value]",
+        "openAIName": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.openAIName.value]",
+        "openAIEndpoint": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.openAIEndpoint.value]",
+        "deployedModels": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.deployedModels.value]"
+      }
+    },
+    "containerApps": {
+      "type": "object",
+      "metadata": {
+        "description": "Container Apps Endpoints"
+      },
+      "value": {
+        "tradingAgentUrl": "[format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'container-apps-deployment'), '2025-04-01').outputs.tradingAgentFqdn.value)]",
+        "webUiUrl": "[format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'container-apps-deployment'), '2025-04-01').outputs.webUiFqdn.value)]",
+        "mcpServiceFqdns": "[reference(resourceId('Microsoft.Resources/deployments', 'container-apps-deployment'), '2025-04-01').outputs.mcpServiceFqdns.value]"
+      }
+    },
+    "deploymentSummary": {
+      "type": "object",
+      "metadata": {
+        "description": "Deployment Summary"
+      },
+      "value": {
+        "environment": "[parameters('environment')]",
+        "location": "[parameters('location')]",
+        "resourcesDeployed": {
+          "identity": "[reference(resourceId('Microsoft.Resources/deployments', 'identity-deployment'), '2025-04-01').outputs.identityName.value]",
+          "keyVault": "[reference(resourceId('Microsoft.Resources/deployments', 'keyvault-deployment'), '2025-04-01').outputs.keyVaultName.value]",
+          "storage": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2025-04-01').outputs.storageAccountName.value]",
+          "acr": "[reference(resourceId('Microsoft.Resources/deployments', 'acr-deployment'), '2025-04-01').outputs.acrName.value]",
+          "aiHub": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.aiHubName.value]",
+          "aiProject": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.aiProjectName.value]",
+          "openAI": "[reference(resourceId('Microsoft.Resources/deployments', 'ai-foundry-deployment'), '2025-04-01').outputs.openAIName.value]"
+        }
+      }
+    }
+  }
+}

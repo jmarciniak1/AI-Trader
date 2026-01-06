@@ -1,0 +1,125 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "17603611047765681139"
+    }
+  },
+  "parameters": {
+    "principalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Principal ID of the Managed Identity"
+      }
+    },
+    "keyVaultId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Key Vault"
+      }
+    },
+    "storageAccountId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Storage Account"
+      }
+    },
+    "acrId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Container Registry"
+      }
+    },
+    "openAIId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Azure OpenAI Service"
+      }
+    },
+    "aiProjectId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the AI Project"
+      }
+    }
+  },
+  "variables": {
+    "roles": {
+      "keyVaultSecretsUser": "4633458b-17de-408a-b874-0445c86b69e6",
+      "storageBlobDataContributor": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
+      "acrPull": "7f951dda-4ed3-4680-a7ca-43fe172d538d",
+      "cognitiveServicesOpenAIUser": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd",
+      "azureMLDataScientist": "f6c7c914-8db3-469d-8ca1-694a8f32e121"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(parameters('keyVaultId'), parameters('principalId'), variables('roles').keyVaultSecretsUser)]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roles').keyVaultSecretsUser)]",
+        "principalId": "[parameters('principalId')]",
+        "principalType": "ServicePrincipal"
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(parameters('storageAccountId'), parameters('principalId'), variables('roles').storageBlobDataContributor)]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roles').storageBlobDataContributor)]",
+        "principalId": "[parameters('principalId')]",
+        "principalType": "ServicePrincipal"
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(parameters('acrId'), parameters('principalId'), variables('roles').acrPull)]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roles').acrPull)]",
+        "principalId": "[parameters('principalId')]",
+        "principalType": "ServicePrincipal"
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(parameters('openAIId'), parameters('principalId'), variables('roles').cognitiveServicesOpenAIUser)]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roles').cognitiveServicesOpenAIUser)]",
+        "principalId": "[parameters('principalId')]",
+        "principalType": "ServicePrincipal"
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(parameters('aiProjectId'), parameters('principalId'), variables('roles').azureMLDataScientist)]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roles').azureMLDataScientist)]",
+        "principalId": "[parameters('principalId')]",
+        "principalType": "ServicePrincipal"
+      }
+    }
+  ],
+  "outputs": {
+    "roleAssignmentIds": {
+      "type": "object",
+      "metadata": {
+        "description": "Role assignment IDs"
+      },
+      "value": {
+        "keyVaultSecretsUser": "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('keyVaultId'), parameters('principalId'), variables('roles').keyVaultSecretsUser))]",
+        "storageBlobDataContributor": "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('storageAccountId'), parameters('principalId'), variables('roles').storageBlobDataContributor))]",
+        "acrPull": "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('acrId'), parameters('principalId'), variables('roles').acrPull))]",
+        "cognitiveServicesOpenAIUser": "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('openAIId'), parameters('principalId'), variables('roles').cognitiveServicesOpenAIUser))]",
+        "azureMLDataScientist": "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('aiProjectId'), parameters('principalId'), variables('roles').azureMLDataScientist))]"
+      }
+    }
+  }
+}

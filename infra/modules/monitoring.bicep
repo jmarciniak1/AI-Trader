@@ -52,6 +52,9 @@ output logAnalyticsName string = logAnalytics.name
 @description('Customer ID of the Log Analytics Workspace')
 output logAnalyticsCustomerId string = logAnalytics.properties.customerId
 
+@description('Primary Shared Key of the Log Analytics Workspace')
+output logAnalyticsSharedKey string = logAnalytics.listKeys().primarySharedKey
+
 @description('Resource ID of Application Insights')
 output appInsightsId string = appInsights.id
 

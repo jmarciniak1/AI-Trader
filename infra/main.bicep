@@ -120,9 +120,7 @@ module aiFoundry 'modules/aiFoundry.bicep' = {
     storageAccountId: storage.outputs.storageAccountId
     keyVaultId: keyVault.outputs.keyVaultId
     appInsightsId: monitoring.outputs.appInsightsId
-    logAnalyticsId: monitoring.outputs.logAnalyticsId
     managedIdentityId: identity.outputs.identityId
-    managedIdentityPrincipalId: identity.outputs.principalId
     tags: tags
     modelDeployments: [
       {
@@ -151,12 +149,6 @@ module aiFoundry 'modules/aiFoundry.bicep' = {
       }
     ]
   }
-  dependsOn: [
-    identity
-    storage
-    keyVault
-    monitoring
-  ]
 }
 
 // Module 7: Role Assignments
@@ -170,13 +162,6 @@ module roleAssignments 'modules/roleAssignments.bicep' = {
     openAIId: aiFoundry.outputs.openAIId
     aiProjectId: aiFoundry.outputs.aiProjectId
   }
-  dependsOn: [
-    identity
-    keyVault
-    storage
-    acr
-    aiFoundry
-  ]
 }
 
 // Module 8: Container Apps Environment
@@ -187,12 +172,9 @@ module containerAppsEnv 'modules/containerAppsEnv.bicep' = {
     environmentName: containerAppsEnvName
     tags: tags
     logAnalyticsCustomerId: monitoring.outputs.logAnalyticsCustomerId
-    logAnalyticsSharedKey: listKeys(monitoring.outputs.logAnalyticsId, '2023-09-01').primarySharedKey
+    logAnalyticsSharedKey: monitoring.outputs.logAnalyticsSharedKey
     zoneRedundant: environment == 'prod'
   }
-  dependsOn: [
-    monitoring
-  ]
 }
 
 // Module 9: Container Apps (all services)
@@ -208,14 +190,6 @@ module containerApps 'modules/containerApps.bicep' = {
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
     imageTag: imageTag
   }
-  dependsOn: [
-    containerAppsEnv
-    identity
-    acr
-    keyVault
-    monitoring
-    roleAssignments
-  ]
 }
 
 // Outputs
@@ -283,7 +257,6 @@ output containerApps object = {
 output deploymentSummary object = {
   environment: environment
   location: location
-  timestamp: utcNow()
   resourcesDeployed: {
     identity: identity.outputs.identityName
     keyVault: keyVault.outputs.keyVaultName
