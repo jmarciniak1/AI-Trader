@@ -101,3 +101,52 @@ Configure in `.env`:
 - `ALPHAADVANTAGE_API_KEY` - US stocks and crypto price data
 - `JINA_API_KEY` - Market information search
 - `TUSHARE_TOKEN` - A-share market data (optional)
+
+## Azure Infrastructure (infra/)
+
+The `infra/` directory contains Bicep IaC templates for deploying AI-Trader to Azure.
+
+### Quick Deployment
+```powershell
+# Automated deployment
+./infra/scripts/Deploy.ps1 `
+  -SubscriptionId "<subscription-id>" `
+  -TenantId "<tenant-id>" `
+  -ResourceGroupName "rg-aitrader-dev" `
+  -Environment "dev"
+
+# Manual deployment
+az group create --name rg-aitrader-dev --location eastus
+az deployment group create --resource-group rg-aitrader-dev --template-file infra/main.bicep --parameters infra/parameters/dev.bicepparam
+```
+
+### Validate Bicep Templates
+```bash
+az bicep build --file infra/main.bicep
+```
+
+### Cleanup
+```powershell
+./infra/scripts/Cleanup.ps1 -ResourceGroupName "rg-aitrader-dev" -DeleteResourceGroup
+```
+
+### Azure Architecture
+- **Container Apps** (7 services): Math (8000), Search (8001), Trade (8002), Price (8003), Crypto (8005), Trading Agent, Web UI (8888)
+- **AI Foundry**: Hub, Project, and Azure OpenAI (GPT-4o, GPT-4-turbo)
+- **Supporting**: Key Vault (secrets), Storage (price-data, agent-data, logs), ACR (container images), Log Analytics + App Insights
+
+### Bicep Modules (infra/modules/)
+- `identity.bicep` - Managed Identity
+- `keyvault.bicep` - Key Vault with RBAC
+- `storage.bicep` - Storage Account with blob containers
+- `acr.bicep` - Container Registry
+- `monitoring.bicep` - Log Analytics & App Insights
+- `containerAppsEnv.bicep` - Container Apps Environment
+- `containerApps.bicep` - All 7 Container Apps
+- `aiFoundry.bicep` - AI Hub, Project, OpenAI
+- `roleAssignments.bicep` - RBAC assignments
+
+### Environment Parameters
+- `infra/parameters/dev.bicepparam` - Development
+- `infra/parameters/staging.bicepparam` - Staging
+- `infra/parameters/prod.bicepparam` - Production
