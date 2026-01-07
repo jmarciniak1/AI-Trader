@@ -1,5 +1,5 @@
 // Azure Storage Account Module
-// Creates storage account with blob containers for application data
+// Creates storage account with blob containers and table storage for application data
 
 @description('Location for the storage account')
 param location string = resourceGroup().location
@@ -27,6 +27,12 @@ param containerNames array = [
   'logs'
 ]
 
+@description('Table names to create for structured data')
+param tableNames array = [
+  'pricedata'
+  'agentpositions'
+]
+
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageAccountName
   location: location
@@ -48,6 +54,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
+// Blob Service
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
   name: 'default'
   parent: storageAccount
@@ -61,6 +68,17 @@ resource containers 'Microsoft.Storage/storageAccounts/blobServices/containers@2
   }
 }]
 
+// Table Service for price data caching
+resource tableService 'Microsoft.Storage/storageAccounts/tableServices@2023-01-01' = {
+  name: 'default'
+  parent: storageAccount
+}
+
+resource tables 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-01-01' = [for tableName in tableNames: {
+  name: tableName
+  parent: tableService
+}]
+
 @description('Resource ID of the storage account')
 output storageAccountId string = storageAccount.id
 
@@ -69,3 +87,9 @@ output storageAccountName string = storageAccount.name
 
 @description('Primary endpoints for the storage account')
 output primaryEndpoints object = storageAccount.properties.primaryEndpoints
+
+@description('Connection string for the storage account')
+output connectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+
+@description('Table endpoint URL')
+output tableEndpoint string = storageAccount.properties.primaryEndpoints.table

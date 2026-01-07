@@ -26,6 +26,13 @@ param appInsightsConnectionString string
 @description('Container image tag')
 param imageTag string = 'latest'
 
+@description('Storage connection string for Table Storage')
+@secure()
+param storageConnectionString string = ''
+
+@description('Price data table name')
+param priceTableName string = 'pricedata'
+
 // Math Service (Port 8000) - Internal
 resource mathService 'Microsoft.App/containerApps@2024-03-01' = {
   name: 'ca-math-service'
@@ -254,6 +261,14 @@ resource priceService 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'KEY_VAULT_URI'
               value: keyVaultUri
+            }
+            {
+              name: 'AZURE_STORAGE_CONNECTION_STRING'
+              value: storageConnectionString
+            }
+            {
+              name: 'AZURE_PRICE_TABLE_NAME'
+              value: priceTableName
             }
           ]
         }

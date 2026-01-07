@@ -70,6 +70,23 @@ Services run on configurable ports (see .env):
 3. Agents read from `merged.jsonl` (or market-specific variants)
 4. Trading records written to `data/agent_data/<signature>/position/position.jsonl`
 
+### Price Data Caching (tool_get_price_local.py)
+The price service uses a hybrid caching architecture for O(1) lookups:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              Price Service Architecture                 │
+├─────────────────────────────────────────────────────────┤
+│  1. Startup: Load JSONL files → In-Memory Dict (CACHE) │
+│  2. Lookup: CACHE[symbol][date] → O(1) response        │
+│  3. Fallback: Azure Table Storage (if configured)      │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Environment Variables for Azure Table Storage:**
+- `AZURE_STORAGE_CONNECTION_STRING` - Storage account connection string
+- `AZURE_PRICE_TABLE_NAME` - Table name (default: "pricedata")
+
 ### Configuration System
 JSON configs in `configs/` define:
 - `agent_type`: Which agent class to use
@@ -133,12 +150,12 @@ az bicep build --file infra/main.bicep
 ### Azure Architecture
 - **Container Apps** (7 services): Math (8000), Search (8001), Trade (8002), Price (8003), Crypto (8005), Trading Agent, Web UI (8888)
 - **AI Foundry**: Hub, Project, and Azure OpenAI (GPT-4o, GPT-4-turbo)
-- **Supporting**: Key Vault (secrets), Storage (price-data, agent-data, logs), ACR (container images), Log Analytics + App Insights
+- **Supporting**: Key Vault (secrets), Storage (blobs + Table Storage for price caching), ACR (container images), Log Analytics + App Insights
 
 ### Bicep Modules (infra/modules/)
 - `identity.bicep` - Managed Identity
 - `keyvault.bicep` - Key Vault with RBAC
-- `storage.bicep` - Storage Account with blob containers
+- `storage.bicep` - Storage Account with blob containers + Table Storage (pricedata, agentpositions)
 - `acr.bicep` - Container Registry
 - `monitoring.bicep` - Log Analytics & App Insights
 - `containerAppsEnv.bicep` - Container Apps Environment

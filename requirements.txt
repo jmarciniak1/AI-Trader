@@ -6,3 +6,6 @@ fastmcp==2.12.5
 # A_stock
 tushare
 efinance
+
+# Azure (optional - for hybrid storage)
+azure-data-tables>=12.4.0

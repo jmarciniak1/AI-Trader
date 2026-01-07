@@ -189,6 +189,8 @@ module containerApps 'modules/containerApps.bicep' = {
     keyVaultUri: keyVault.outputs.keyVaultUri
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
     imageTag: imageTag
+    storageConnectionString: storage.outputs.connectionString
+    priceTableName: 'pricedata'
   }
 }
 
@@ -216,6 +218,7 @@ output storage object = {
   id: storage.outputs.storageAccountId
   name: storage.outputs.storageAccountName
   endpoints: storage.outputs.primaryEndpoints
+  tableEndpoint: storage.outputs.tableEndpoint
 }
 
 @description('Container Registry Details')
