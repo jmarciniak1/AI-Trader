@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "analyzers": {
+    "core": {
+      "enabled": true,
+      "verbose": false,
+      "rules": {
+        "no-hardcoded-env-urls": {
+          "level": "warning"
+        },
+        "no-unused-params": {
+          "level": "warning"
+        },
+        "no-unused-vars": {
+          "level": "warning"
+        }
+      }
+    }
+  }
+}

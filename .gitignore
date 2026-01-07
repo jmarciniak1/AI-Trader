@@ -19,6 +19,11 @@ runtime_env.json
 *.log
 mcp_services*.log
 test_run*.log
+
+# Bicep build artifacts
+infra/**/*.json
+!infra/**/package*.json
+
 # Environment variables
 AI-Trader-Astock_daily/
 .env
