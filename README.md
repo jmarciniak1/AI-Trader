@@ -318,7 +318,7 @@ AI-Trader Bench/
 
 - **Python 3.10+** 
 - **API Keys**: 
-  - OpenAI (for AI models)
+  - Azure OpenAI (for AI models)
   - Alpha Vantage (for NASDAQ 100 data)
   - Jina AI (for market information search)
   - Tushare (for A-share market data, optional)
@@ -343,14 +343,17 @@ cp .env.example .env
 Create `.env` file and configure the following variables:
 
 ```bash
-# 🤖 AI Model API Configuration
-OPENAI_API_BASE=https://your-openai-proxy.com/v1
-OPENAI_API_KEY=your_openai_key
+# 🤖 Azure AI Foundry Configuration
+# Get these values from your Azure OpenAI resource in Azure Portal
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_KEY=your_azure_openai_key
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+AZURE_OPENAI_DEPLOYMENT=gpt-4o  # Your deployment name
 
 # 📊 Data Source Configuration
 ALPHAADVANTAGE_API_KEY=your_alpha_vantage_key  # For NASDAQ 100 and cryptocurrency data
 JINA_API_KEY=your_jina_api_key
-TUSHARE_TOKEN=your_tushare_token               # For A-share data
+TUSHARE_TOKEN=your_tushare_token               # For A-share data (optional)
 
 # ⚙️ System Configuration
 RUNTIME_ENV_PATH=./runtime_env.json # Recommended to use absolute path
@@ -517,9 +520,11 @@ python main.py configs/default_crypto_config.json
   },
   "models": [
     {
-      "name": "claude-3.7-sonnet",
-      "basemodel": "anthropic/claude-3.7-sonnet",
-      "signature": "claude-3.7-sonnet",
+      "name": "gpt-4o",
+      "azure_deployment": "gpt-4o",
+      "azure_endpoint": "https://your-resource.openai.azure.com/",
+      "azure_api_version": "2024-02-15-preview",
+      "signature": "gpt-4o",
       "enabled": true
     }
   ],
@@ -540,9 +545,11 @@ python main.py configs/default_crypto_config.json
   },
   "models": [
     {
-      "name": "claude-3.7-sonnet",
-      "basemodel": "anthropic/claude-3.7-sonnet",
-      "signature": "claude-3.7-sonnet",
+      "name": "gpt-4-turbo",
+      "azure_deployment": "gpt-4-turbo",
+      "azure_endpoint": "https://your-resource.openai.azure.com/",
+      "azure_api_version": "2024-02-15-preview",
+      "signature": "gpt-4-turbo",
       "enabled": true
     }
   ],
@@ -647,9 +654,11 @@ python3 -m http.server 8000
   },
   "models": [
     {
-      "name": "claude-3.7-sonnet",
-      "basemodel": "anthropic/claude-3.7-sonnet",
-      "signature": "claude-3.7-sonnet",
+      "name": "gpt-4o",
+      "azure_deployment": "gpt-4o",
+      "azure_endpoint": "https://your-resource.openai.azure.com/",
+      "azure_api_version": "2024-02-15-preview",
+      "signature": "gpt-4o",
       "enabled": true
     }
   ],
@@ -832,6 +841,7 @@ This project is licensed under the [MIT License](LICENSE).
 Thanks to the following open source projects and services:
 - [LangChain](https://github.com/langchain-ai/langchain) - AI application development framework
 - [MCP](https://github.com/modelcontextprotocol) - Model Context Protocol
+- [Azure OpenAI Service](https://azure.microsoft.com/en-us/products/ai-services/openai-service) - Enterprise-grade AI models
 - [Alpha Vantage](https://www.alphavantage.co/) - US stock financial data API
 - [Tushare](https://tushare.pro/) - China A-share market data API
 - [efinance](https://github.com/Micro-sheep/efinance) - A-share hourly data acquisition
