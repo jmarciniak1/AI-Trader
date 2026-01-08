@@ -99,13 +99,23 @@ def load_config(config_path=None):
 
 async def _run_model_in_current_process(AgentClass, model_config, INIT_DATE, END_DATE, agent_config, log_config):
     model_name = model_config.get("name", "unknown")
+    
+    # Legacy OpenAI format (for backward compatibility)
     basemodel = model_config.get("basemodel")
-    signature = model_config.get("signature")
     openai_base_url = model_config.get("openai_base_url", None)
     openai_api_key = model_config.get("openai_api_key", None)
+    
+    # New Azure AI Foundry format
+    azure_deployment = model_config.get("azure_deployment")
+    azure_endpoint = model_config.get("azure_endpoint")
+    azure_api_version = model_config.get("azure_api_version")
+    
+    # Signature is required in both formats
+    signature = model_config.get("signature")
 
-    if not basemodel:
-        print(f"❌ Model {model_name} missing basemodel field")
+    # Validate required fields - need either basemodel or azure_deployment
+    if not basemodel and not azure_deployment:
+        print(f"❌ Model {model_name} missing basemodel or azure_deployment field")
         return
     if not signature:
         print(f"❌ Model {model_name} missing signature field")
@@ -114,7 +124,12 @@ async def _run_model_in_current_process(AgentClass, model_config, INIT_DATE, END
     print("=" * 60)
     print(f"🤖 Processing model: {model_name}")
     print(f"📝 Signature: {signature}")
-    print(f"🔧 BaseModel: {basemodel}")
+    if azure_deployment:
+        print(f"🔧 Azure Deployment: {azure_deployment}")
+        print(f"🌐 Azure Endpoint: {azure_endpoint or 'from environment'}")
+    elif basemodel:
+        print(f"🔧 BaseModel: {basemodel}")
+        print("⚠️  Using legacy OpenAI format (consider migrating to Azure)")
 
     project_root = Path(__file__).resolve().parent
     runtime_env_dir = project_root / "data" / "agent_data" / signature
@@ -135,11 +150,16 @@ async def _run_model_in_current_process(AgentClass, model_config, INIT_DATE, END
     try:
         agent = AgentClass(
             signature=signature,
-            basemodel=basemodel,
+            basemodel=basemodel or azure_deployment,  # Use basemodel for backward compat or deployment name
             stock_symbols=all_nasdaq_100_symbols,
             log_path=log_path,
+            # Legacy OpenAI parameters (for backward compatibility)
             openai_base_url=openai_base_url,
             openai_api_key=openai_api_key,
+            # Azure AI Foundry parameters
+            azure_deployment=azure_deployment,
+            azure_endpoint=azure_endpoint,
+            azure_api_version=azure_api_version,
             max_steps=max_steps,
             max_retries=max_retries,
             base_delay=base_delay,
