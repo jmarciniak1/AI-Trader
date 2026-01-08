@@ -403,17 +403,20 @@ class BaseAgent:
             )
 
         try:
-            # Create AI model - use custom DeepSeekChatOpenAI for DeepSeek models
-            # to handle tool_calls.args format differences (JSON string vs dict)
+            # Create AI model
+            # Note: DeepSeek models use their own API endpoints (not Azure), so we use 
+            # the custom DeepSeekChatOpenAI wrapper with the azure_endpoint parameter
+            # treated as a standard base_url for non-Azure OpenAI-compatible APIs
             if "deepseek" in self.basemodel.lower():
                 self.model = DeepSeekChatOpenAI(
                     model=self.basemodel,
-                    base_url=self.azure_endpoint,  # DeepSeek uses base_url
+                    base_url=self.azure_endpoint,  # For DeepSeek, this is their API endpoint
                     api_key=self.azure_api_key,
                     max_retries=3,
                     timeout=30,
                 )
             else:
+                # Use Azure OpenAI for standard models (GPT-4, GPT-4o, etc.)
                 self.model = AzureChatOpenAI(
                     azure_deployment=self.azure_deployment,
                     azure_endpoint=self.azure_endpoint,
