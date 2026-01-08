@@ -66,6 +66,61 @@ infra/
 - **Azure AI Foundry Project**: Agent orchestration
 - **Azure OpenAI Service**: GPT-4o and GPT-4-turbo deployments
 
+#### Azure OpenAI Deployment Configuration
+
+The Bicep templates automatically create the following Azure OpenAI deployments:
+
+| Deployment Name | Model | Version | Capacity |
+|----------------|-------|---------|----------|
+| `gpt-4o` | gpt-4o | 2024-08-06 | 10 |
+| `gpt-4-turbo` | gpt-4 | turbo-2024-04-09 | 10 |
+
+**Mapping to Application Configuration:**
+
+To use these deployments in your AI-Trader configuration files:
+
+```json
+{
+  "models": [
+    {
+      "name": "gpt-4o",
+      "azure_deployment": "gpt-4o",
+      "azure_endpoint": "https://YOUR-RESOURCE-NAME.openai.azure.com/",
+      "azure_api_version": "2024-02-15-preview",
+      "signature": "gpt-4o",
+      "enabled": true
+    }
+  ]
+}
+```
+
+**Retrieving Azure OpenAI Credentials:**
+
+After deployment, retrieve your endpoint and API key:
+
+```bash
+# Get endpoint
+az cognitiveservices account show \
+  --name YOUR-OPENAI-RESOURCE-NAME \
+  --resource-group YOUR-RESOURCE-GROUP \
+  --query "properties.endpoint" -o tsv
+
+# Get API key
+az cognitiveservices account keys list \
+  --name YOUR-OPENAI-RESOURCE-NAME \
+  --resource-group YOUR-RESOURCE-GROUP \
+  --query "key1" -o tsv
+```
+
+Update your `.env` file with these values:
+
+```bash
+AZURE_OPENAI_ENDPOINT="https://YOUR-RESOURCE-NAME.openai.azure.com/"
+AZURE_OPENAI_API_KEY="your-api-key-here"
+AZURE_OPENAI_API_VERSION="2024-02-15-preview"
+AZURE_OPENAI_DEPLOYMENT="gpt-4o"
+```
+
 ### Monitoring
 - **Log Analytics Workspace**: Centralized logging
 - **Application Insights**: Application performance monitoring

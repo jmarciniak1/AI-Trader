@@ -36,8 +36,10 @@ The main configuration file that defines all system parameters. This file is loa
 - **`models`**: List of AI models to use for trading decisions
   - Each model entry contains:
     - `name`: Display name for the model
-    - `basemodel`: Full model identifier/path
-    - `signature`: Model signature for API calls
+    - `azure_deployment`: Azure OpenAI deployment name (e.g., "gpt-4o")
+    - `azure_endpoint`: Azure OpenAI endpoint URL (optional if set in environment)
+    - `azure_api_version`: Azure OpenAI API version (optional, defaults to "2024-02-15-preview")
+    - `signature`: Model signature for identification and logging
     - `enabled`: Boolean flag to enable/disable the model
 
 #### Logging Configuration
@@ -102,8 +104,10 @@ Certain configuration values can be overridden using environment variables:
   "models": [
     {
       "name": "gpt-4o",
-      "basemodel": "openai/gpt-4o-2024-11-20",
-      "signature": "gpt-4o-2024-11-20",
+      "azure_deployment": "gpt-4o",
+      "azure_endpoint": "https://your-resource.openai.azure.com/",
+      "azure_api_version": "2024-02-15-preview",
+      "signature": "gpt-4o",
       "enabled": true
     }
   ],
@@ -212,21 +216,27 @@ Certain configuration values can be overridden using environment variables:
   },
   "models": [
     {
-      "name": "claude-3.7-sonnet",
-      "basemodel": "anthropic/claude-3.7-sonnet",
-      "signature": "claude-3.7-sonnet",
-      "enabled": true
-    },
-    {
       "name": "gpt-4o",
-      "basemodel": "openai/gpt-4o-2024-11-20",
-      "signature": "gpt-4o-2024-11-20",
+      "azure_deployment": "gpt-4o",
+      "azure_endpoint": "https://your-resource.openai.azure.com/",
+      "azure_api_version": "2024-02-15-preview",
+      "signature": "gpt-4o",
       "enabled": true
     },
     {
-      "name": "qwen3-max",
-      "basemodel": "qwen/qwen3-max",
-      "signature": "qwen3-max",
+      "name": "gpt-4-turbo",
+      "azure_deployment": "gpt-4-turbo",
+      "azure_endpoint": "https://your-resource.openai.azure.com/",
+      "azure_api_version": "2024-02-15-preview",
+      "signature": "gpt-4-turbo",
+      "enabled": true
+    },
+    {
+      "name": "gpt-5",
+      "azure_deployment": "gpt-5-deployment",
+      "azure_endpoint": "https://your-resource.openai.azure.com/",
+      "azure_api_version": "2024-02-15-preview",
+      "signature": "gpt-5",
       "enabled": false
     }
   ],

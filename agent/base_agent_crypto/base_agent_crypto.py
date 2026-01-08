@@ -17,7 +17,7 @@ from langchain.agents import create_agent
 from langchain_core.messages import AIMessage
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
 
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
@@ -148,6 +148,9 @@ class BaseAgentCrypto:
         base_delay: float = 0.5,
         openai_base_url: Optional[str] = None,
         openai_api_key: Optional[str] = None,
+        azure_endpoint: Optional[str] = None,
+        azure_deployment: Optional[str] = None,
+        azure_api_version: Optional[str] = None,
         initial_cash: float = 10000.0,
         init_date: str = "2025-10-13",
         market: str = "crypto",
@@ -157,15 +160,18 @@ class BaseAgentCrypto:
 
         Args:
             signature: Agent signature/name
-            basemodel: Base model name
+            basemodel: Base model name (deprecated for Azure, use azure_deployment)
             crypto_symbols: List of crypto symbols, defaults to Bitwise 10
             mcp_config: MCP tool configuration, including port and URL information
             log_path: Log path, defaults to ./data/agent_data_crypto
             max_steps: Maximum reasoning steps
             max_retries: Maximum retry attempts
             base_delay: Base delay time for retries
-            openai_base_url: OpenAI API base URL
-            openai_api_key: OpenAI API key
+            openai_base_url: OpenAI API base URL (deprecated, use azure_endpoint)
+            openai_api_key: OpenAI API key (deprecated, use Azure API key via env)
+            azure_endpoint: Azure OpenAI endpoint URL
+            azure_deployment: Azure OpenAI deployment name
+            azure_api_version: Azure OpenAI API version
             initial_cash: Initial cash amount in USDT
             init_date: Initialization date
             market: Market type, hardcoded to "crypto"
@@ -192,20 +198,36 @@ class BaseAgentCrypto:
         # Set log path
         self.base_log_path = log_path or "./data/agent_data_crypto"
 
-        # Set OpenAI configuration
-        if openai_base_url == None:
-            self.openai_base_url = os.getenv("OPENAI_API_BASE")
+        # Set Azure OpenAI configuration (with backward compatibility)
+        # Priority: Azure parameters > OpenAI parameters > Environment variables
+        if azure_endpoint is not None:
+            self.azure_endpoint = azure_endpoint
+        elif openai_base_url is not None:
+            # Backward compatibility: treat openai_base_url as azure_endpoint
+            self.azure_endpoint = openai_base_url
         else:
-            self.openai_base_url = openai_base_url
-        if openai_api_key == None:
-            self.openai_api_key = os.getenv("OPENAI_API_KEY")
+            self.azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT") or os.getenv("OPENAI_API_BASE")
+        
+        if azure_deployment is not None:
+            self.azure_deployment = azure_deployment
         else:
-            self.openai_api_key = openai_api_key
+            # Try to get from env, or fall back to basemodel
+            self.azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT") or basemodel
+        
+        if azure_api_version is not None:
+            self.azure_api_version = azure_api_version
+        else:
+            self.azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+        
+        if openai_api_key is not None:
+            self.azure_api_key = openai_api_key
+        else:
+            self.azure_api_key = os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 
         # Initialize components
         self.client: Optional[MultiServerMCPClient] = None
         self.tools: Optional[List] = None
-        self.model: Optional[ChatOpenAI] = None
+        self.model: Optional[AzureChatOpenAI] = None
         self.agent: Optional[Any] = None
 
         # Data paths
@@ -237,13 +259,17 @@ class BaseAgentCrypto:
         """Initialize MCP client and AI model"""
         print(f"🚀 Initializing crypto agent: {self.signature}")
 
-        # Validate OpenAI configuration
-        if not self.openai_api_key:
+        # Validate Azure OpenAI configuration
+        if not self.azure_api_key:
             raise ValueError(
-                "❌ OpenAI API key not set. Please configure OPENAI_API_KEY in environment or config file."
+                "❌ Azure OpenAI API key not set. Please configure AZURE_OPENAI_API_KEY in environment or config file."
             )
-        if not self.openai_base_url:
-            print("⚠️  OpenAI base URL not set, using default")
+        if not self.azure_endpoint:
+            print("⚠️  Azure OpenAI endpoint not set, using default")
+        if not self.azure_deployment:
+            raise ValueError(
+                "❌ Azure OpenAI deployment name not set. Please configure AZURE_OPENAI_DEPLOYMENT in environment or config file."
+            )
 
         try:
             # Create MCP client
@@ -265,21 +291,24 @@ class BaseAgentCrypto:
             )
 
         try:
-            # Create AI model - use custom DeepSeekChatOpenAI for DeepSeek models
-            # to handle tool_calls.args format differences (JSON string vs dict)
+            # Create AI model
+            # Note: DeepSeek models use their own API endpoints (not Azure), so we use 
+            # the custom DeepSeekChatOpenAI wrapper with the azure_endpoint parameter
+            # treated as a standard base_url for non-Azure OpenAI-compatible APIs
             if "deepseek" in self.basemodel.lower():
                 self.model = DeepSeekChatOpenAI(
                     model=self.basemodel,
-                    base_url=self.openai_base_url,
-                    api_key=self.openai_api_key,
+                    base_url=self.azure_endpoint,  # For DeepSeek, this is their API endpoint
+                    api_key=self.azure_api_key,
                     max_retries=3,
                     timeout=30,
                 )
             else:
-                self.model = ChatOpenAI(
-                    model=self.basemodel,
-                    base_url=self.openai_base_url,
-                    api_key=self.openai_api_key,
+                self.model = AzureChatOpenAI(
+                    azure_deployment=self.azure_deployment,
+                    azure_endpoint=self.azure_endpoint,
+                    api_key=self.azure_api_key,
+                    api_version=self.azure_api_version,
                     max_retries=3,
                     timeout=30,
                 )

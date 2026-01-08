@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from langchain.agents import create_agent
 from dotenv import load_dotenv
 
